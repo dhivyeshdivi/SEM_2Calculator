@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#f2f2f2;
+    --paper:#0a0a0a;
+    --line:#f2f2f2;
+    --line-soft:#444444;
+    --gray-1:#1a1a1a;
+    --gray-2:#262626;
+    --gray-3:#8a8a8a;
+    --radius:6px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    line-height:1.5;
+    padding-bottom:60px;
+  }
+  .wrap{ max-width:920px; margin:0 auto; padding:40px 20px 0; }
+
+  header.top{ margin-bottom:28px; }
+  header.top .kicker{
+    font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.12em;
+    text-transform:uppercase; color:var(--gray-3); margin-bottom:8px;
+  }
+  header.top h1{
+    font-size:26px; font-weight:700; margin:0 0 6px; letter-spacing:-0.01em;
+  }
+  header.top p{ margin:0; color:#aaaaaa; font-size:14px; max-width:600px; }
+
+  /* tabs */
+  .tabs{ display:flex; border:1.5px solid var(--line); border-radius:var(--radius); overflow:hidden; margin:26px 0 24px; }
+  .tab-btn{
+    flex:1; text-align:center; font-family:'Inter',sans-serif; font-weight:600; font-size:13.5px;
+    background:var(--paper); color:var(--ink); border:none; border-right:1.5px solid var(--line);
+    padding:14px 10px; cursor:pointer; transition:background .15s;
+  }
+  .tab-btn:last-child{ border-right:none; }
+  .tab-btn:hover{ background:var(--gray-1); }
+  .tab-btn.active{ background:var(--ink); color:var(--paper); }
+  .tab-btn .num{ font-family:'JetBrains Mono',monospace; font-size:11px; opacity:0.6; margin-right:4px; }
+
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+
+  .card{
+    border:1.5px solid var(--line); border-radius:var(--radius);
+    padding:22px; margin-bottom:18px; background:var(--paper);
+  }
+  .card + .card{ margin-top:0; }
+
+  .card-head{ margin-bottom:16px; }
+  .card-head h2{ font-size:17px; font-weight:700; margin:0 0 4px; }
+  .card-head p{ margin:0; font-size:13px; color:#aaaaaa; }
+
+  label{ display:block; font-size:12px; font-weight:600; color:#bbbbbb; margin-bottom:6px; letter-spacing:0.01em; }
+  .field{ margin-bottom:14px; }
+
+  input[type="text"], input[type="number"], textarea{
+    width:100%; font-family:'JetBrains Mono',monospace; font-size:14.5px; color:var(--ink);
+    background:var(--paper); border:1.3px solid var(--line); border-radius:4px;
+    padding:10px 12px; outline:none;
+  }
+  textarea{ resize:vertical; min-height:88px; line-height:1.55; }
+  input:focus, textarea:focus{ background:var(--gray-1); }
+
+  .row{ display:grid; gap:14px; }
+  .row.two{ grid-template-columns:1fr 1fr; }
+  .row.four{ grid-template-columns:1fr 1fr 1fr 1fr; }
+  @media (max-width:600px){ .row.two, .row.four{ grid-template-columns:1fr 1fr; } }
+
+  .btn-row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:4px; }
+  button{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:13.5px;
+    border:1.3px solid var(--line); cursor:pointer; padding:10px 18px; border-radius:4px;
+    background:var(--ink); color:var(--paper);
+  }
+  button.ghost{ background:var(--paper); color:var(--ink); }
+  button.ghost:hover{ background:var(--gray-1); }
+  button.primary:hover{ background:#333; }
+  button:active{ transform:scale(0.98); }
+
+  .error-box{
+    border:1.3px solid var(--line); background:var(--gray-1);
+    padding:11px 14px; border-radius:4px; font-family:'JetBrains Mono',monospace;
+    font-size:12.5px; margin-top:12px; display:none;
+  }
+  .error-box.show{ display:block; }
+
+  .result-area{ margin-top:18px; display:none; }
+  .result-area.show{ display:block; }
+
+  .verdict{
+    border:1.5px solid var(--line); padding:14px 16px; border-radius:4px;
+    margin-bottom:14px; font-weight:700; font-size:14.5px; display:flex; gap:10px; align-items:center;
+  }
+  .verdict.yes{ background:var(--ink); color:var(--paper); }
+  .verdict.no{ background:var(--paper); color:var(--ink); }
+
+  table{ width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace; font-size:13px; }
+  thead th{
+    text-align:center; padding:9px 8px; border:1px solid var(--line); background:var(--gray-1);
+    font-weight:700; font-size:11.5px; text-transform:uppercase; letter-spacing:0.03em;
+  }
+  tbody td{ text-align:center; padding:8px; border:1px solid var(--line-soft); }
+  tr.mismatch td{ background:var(--gray-2); font-weight:700; }
+  .table-scroll{ overflow-x:auto; }
+
+  .toggle-link{
+    font-family:'JetBrains Mono',monospace; font-size:12px; text-decoration:underline;
+    cursor:pointer; color:#cccccc; background:none; border:none; padding:0; font-weight:600;
+  }
+  .laws-table{ margin-top:14px; display:none; }
+  .laws-table.show{ display:block; }
+  .laws-table table{ font-size:12.5px; }
+  .laws-table td, .laws-table th{ text-align:left; padding:7px 10px; }
+
+  .grid-results{ display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:10px; }
+  .stat-card{ border:1.3px solid var(--line); border-radius:4px; padding:14px 16px; }
+  .stat-card .stat-label{ font-size:11.5px; font-weight:600; color:#aaaaaa; margin-bottom:4px; }
+  .stat-card .stat-formula{ font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--gray-3); margin-bottom:8px; }
+  .stat-card .stat-value{ font-family:'JetBrains Mono',monospace; font-size:19px; font-weight:700; word-break:break-all; }
+
+  .summary-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(130px,1fr)); gap:10px; margin-bottom:16px; }
+  .mini-stat{ border:1.3px solid var(--line); border-radius:4px; padding:11px 13px; }
+  .mini-stat .l{ font-size:10.5px; color:#aaaaaa; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px; }
+  .mini-stat .v{ font-family:'JetBrains Mono',monospace; font-size:16px; font-weight:700; }
+
+  .matrix-table td, .matrix-table th{ font-family:'JetBrains Mono',monospace; }
+  .matrix-table td.edge-cell{ font-weight:700; }
+  .matrix-table td.loop-cell{ font-weight:700; text-decoration:underline; }
+
+  .subhead{ font-weight:700; font-size:13.5px; margin:18px 0 9px; }
+  .subhead:first-child{ margin-top:0; }
+
+  .adj-list{ display:flex; flex-direction:column; gap:6px; font-family:'JetBrains Mono',monospace; font-size:13px; }
+  .adj-row{ padding:7px 10px; border:1px solid var(--line-soft); border-radius:4px; }
+  .adj-row b{ display:inline-block; min-width:26px; }
+
+  .comp-pill{
+    display:inline-block; padding:5px 11px; border:1.3px solid var(--line); border-radius:999px;
+    margin:3px; font-family:'JetBrains Mono',monospace; font-size:12px;
+  }
+
+  .flag-row{ display:flex; flex-wrap:wrap; gap:7px; margin-top:2px; }
+  .flag{ font-size:11.5px; font-family:'JetBrains Mono',monospace; padding:5px 10px; border-radius:999px; border:1.3px solid var(--line-soft); color:#8a8a8a; }
+  .flag.on{ border-color:var(--line); color:var(--ink); font-weight:700; }
+
+  .hint{ font-size:11.5px; color:var(--gray-3); margin-top:5px; font-family:'JetBrains Mono',monospace; }
+
+  hr.sep{ border:none; border-top:1px solid var(--line-soft); margin:20px 0; }
+
+  footer{ text-align:center; color:var(--gray-3); font-size:11.5px; margin-top:36px; font-family:'JetBrains Mono',monospace; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="kicker">Algebra &amp; Combinatorics · Unit 1 / 2 / 3</div>
+    <h1>Calculator</h1>
+    <p>Logical equivalence, permutations &amp; combinations, and graph terminology / matrix representation — worked out exactly.</p>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-unit="1"><span class="num">01</span>Logical Equivalence</button>
+    <button class="tab-btn" data-unit="2"><span class="num">02</span>Permutations &amp; Combinations</button>
+    <button class="tab-btn" data-unit="3"><span class="num">03</span>Graph &amp; Matrix</button>
+  </nav>
+
+  <!-- UNIT 1 -->
+  <section id="unit1" class="panel active">
+    <div class="card">
+      <div class="card-head">
+        <h2>Logical Equivalence Checker</h2>
+        <p>Enter one or two propositional statements to build a truth table and test equivalence.</p>
+      </div>
+
+      <div class="field">
+        <label for="exprA">Expression A</label>
+        <input type="text" id="exprA" placeholder="e.g. ~(p & q)   or   p AND NOT q">
+      </div>
+      <div class="field">
+        <label for="exprB">Expression B <span style="font-weight:400;color:#8a8a8a;">(optional)</span></label>
+        <input type="text" id="exprB" placeholder="e.g. ~p | ~q">
+      </div>
+      <div class="hint">~ NOT · & AND · | OR · -&gt; IMPLIES · &lt;-&gt; IFF · ^ XOR — words also accepted</div>
+
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="primary" id="btnEvalLogic">Generate truth table</button>
+        <button class="ghost" id="btnLogicExample1">Example: De Morgan</button>
+        <button class="toggle-link" id="btnToggleLaws" style="margin-left:auto;align-self:center;">Show laws of equivalence ▾</button>
+      </div>
+
+      <div class="laws-table" id="lawsTable">
+        <hr class="sep">
+        <table>
+          <thead><tr><th>Equivalence</th><th>Law</th></tr></thead>
+          <tbody>
+            <tr><td>p ∧ T ≡ p &nbsp;·&nbsp; p ∨ F ≡ p</td><td>Identity</td></tr>
+            <tr><td>p ∨ T ≡ T &nbsp;·&nbsp; p ∧ F ≡ F</td><td>Domination</td></tr>
+            <tr><td>p ∨ p ≡ p &nbsp;·&nbsp; p ∧ p ≡ p</td><td>Idempotent</td></tr>
+            <tr><td>¬(¬p) ≡ p</td><td>Double negation</td></tr>
+            <tr><td>p ∨ q ≡ q ∨ p &nbsp;·&nbsp; p ∧ q ≡ q ∧ p</td><td>Commutative</td></tr>
+            <tr><td>(p∨q)∨r ≡ p∨(q∨r) &nbsp;·&nbsp; (p∧q)∧r ≡ p∧(q∧r)</td><td>Associative</td></tr>
+            <tr><td>p∨(q∧r) ≡ (p∨q)∧(p∨r) &nbsp;·&nbsp; p∧(q∨r) ≡ (p∧q)∨(p∧r)</td><td>Distributive</td></tr>
+            <tr><td>¬(p∧q) ≡ ¬p∨¬q &nbsp;·&nbsp; ¬(p∨q) ≡ ¬p∧¬q</td><td>De Morgan's</td></tr>
+            <tr><td>p∨(p∧q) ≡ p &nbsp;·&nbsp; p∧(p∨q) ≡ p</td><td>Absorption</td></tr>
+            <tr><td>p∨¬p ≡ T &nbsp;·&nbsp; p∧¬p ≡ F</td><td>Negation (complement)</td></tr>
+            <tr><td>p→q ≡ ¬p∨q</td><td>Implication</td></tr>
+            <tr><td>p↔q ≡ (p→q)∧(q→p) ≡ (p∧q)∨(¬p∧¬q)</td><td>Biconditional</td></tr>
+            <tr><td>p→q ≡ ¬q→¬p</td><td>Contraposition</td></tr>
+            <tr><td>p→(q→r) ≡ (p∧q)→r</td><td>Exportation</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="error-box" id="logicError"></div>
+
+      <div class="result-area" id="logicResult">
+        <div id="logicVerdict"></div>
+        <div class="table-scroll"><table id="logicTable"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- UNIT 2 -->
+  <section id="unit2" class="panel">
+    <div class="card">
+      <div class="card-head">
+        <h2>Permutations &amp; Combinations</h2>
+        <p>Permutation = order matters (arrangement). Combination = order doesn't matter (selection). Enter n and r for the standard counting results.</p>
+      </div>
+
+      <div class="row two">
+        <div class="field">
+          <label for="pcN">n — total items</label>
+          <input type="number" id="pcN" min="0" step="1" placeholder="e.g. 10">
+        </div>
+        <div class="field">
+          <label for="pcR">r — items chosen</label>
+          <input type="number" id="pcR" min="0" step="1" placeholder="e.g. 3">
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="primary" id="btnEvalPC">Calculate</button>
+        <button class="ghost" id="btnPCExample">Example: n=10, r=3</button>
+      </div>
+
+      <div class="error-box" id="pcError"></div>
+      <div class="result-area" id="pcResult"><div class="grid-results" id="pcGrid"></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Distinguishable Permutations of a Word</h2>
+        <p>Number of distinct arrangements of all letters, accounting for repeats: n! ÷ (n₁! n₂! …)</p>
+      </div>
+      <div class="field">
+        <label for="wordInput">Word</label>
+        <input type="text" id="wordInput" placeholder="e.g. RADAR or UNUSUAL">
+      </div>
+      <div class="btn-row">
+        <button class="primary" id="btnEvalWord">Calculate</button>
+        <button class="ghost" id="btnWordExample">Example: RADAR</button>
+      </div>
+      <div class="error-box" id="wordError"></div>
+      <div class="result-area" id="wordResult"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Two-Group Selection (Committee)</h2>
+        <p>Choose r₁ from group 1 (size n₁) and r₂ from group 2 (size n₂): C(n₁,r₁) × C(n₂,r₂)</p>
+      </div>
+      <div class="row four">
+        <div class="field"><label for="g1n">n₁</label><input type="number" id="g1n" min="0" step="1" placeholder="9"></div>
+        <div class="field"><label for="g1r">r₁</label><input type="number" id="g1r" min="0" step="1" placeholder="3"></div>
+        <div class="field"><label for="g2n">n₂</label><input type="number" id="g2n" min="0" step="1" placeholder="11"></div>
+        <div class="field"><label for="g2r">r₂</label><input type="number" id="g2r" min="0" step="1" placeholder="4"></div>
+      </div>
+      <div class="btn-row">
+        <button class="primary" id="btnEvalGroup">Calculate</button>
+        <button class="ghost" id="btnGroupExample">Example: committee of educationalists &amp; socialists</button>
+      </div>
+      <div class="error-box" id="groupError"></div>
+      <div class="result-area" id="groupResult"></div>
+    </div>
+  </section>
+
+  <!-- UNIT 3 -->
+  <section id="unit3" class="panel">
+    <div class="card">
+      <div class="card-head">
+        <h2>Graph Terminology &amp; Matrix Representation</h2>
+        <p>Paste an adjacency matrix (one row per line, values space/comma separated) to extract graph terminology: order, size, degree, loops, connectivity and more.</p>
+      </div>
+
+      <div class="field">
+        <label for="matrixInput">Adjacency matrix</label>
+        <textarea id="matrixInput" placeholder="0 1 1 0&#10;1 0 1 1&#10;1 1 0 0&#10;0 1 0 0"></textarea>
+      </div>
+      <div class="hint">Symmetric → undirected · nonzero diagonal → loop · entries &gt; 1 → parallel edges (multigraph)</div>
+
+      <div class="btn-row" style="margin-top:12px;">
+        <button class="primary" id="btnEvalGraph">Analyze graph</button>
+        <button class="ghost" id="btnGraphExample1">Undirected example</button>
+        <button class="ghost" id="btnGraphExample2">Directed example</button>
+        <button class="ghost" id="btnGraphExample3">Disconnected example</button>
+      </div>
+
+      <div class="error-box" id="graphError"></div>
+      <div class="result-area" id="graphResult"></div>
+    </div>
+  </section>
+
+  <footer>For study &amp; verification — cross-check critical results against your course material.</footer>
+</div>
+
+<script>
+/* TAB SWITCHING */
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('unit'+btn.dataset.unit).classList.add('active');
+  });
+});
+
+document.getElementById('btnToggleLaws').addEventListener('click', (e)=>{
+  const t = document.getElementById('lawsTable');
+  t.classList.toggle('show');
+  e.target.textContent = t.classList.contains('show') ? 'Hide laws of equivalence ▴' : 'Show laws of equivalence ▾';
+});
+
+/* ============================================================
+   UNIT 1 — LOGICAL EQUIVALENCE
+============================================================ */
+function tokenize(str){
+  let s = str;
+  s = s.replace(/<=>/g,'<->').replace(/=>/g,'->');
+  s = s.replace(/\biff\b/gi,'<->');
+  s = s.replace(/\bimplies\b/gi,'->');
+  s = s.replace(/\bxor\b/gi,'^');
+  s = s.replace(/\band\b/gi,'&');
+  s = s.replace(/\bor\b/gi,'|');
+  s = s.replace(/\bnot\b/gi,'~');
+  s = s.replace(/¬/g,'~').replace(/∧/g,'&').replace(/∨/g,'|').replace(/→/g,'->').replace(/↔/g,'<->');
+
+  const tokens = [];
+  let i = 0;
+  while (i < s.length) {
+    const c = s[i];
+    if (/\s/.test(c)) { i++; continue; }
+    if (c === '<' && s.substr(i,3) === '<->') { tokens.push('<->'); i += 3; continue; }
+    if (c === '-' && s[i+1] === '>') { tokens.push('->'); i += 2; continue; }
+    if ('()~&|^!'.includes(c)) { tokens.push(c === '!' ? '~' : c); i++; continue; }
+    if (/[A-Za-z]/.test(c)) {
+      let j = i;
+      while (j < s.length && /[A-Za-z0-9]/.test(s[j])) j++;
+      tokens.push(s.slice(i,j));
+      i = j;
+      continue;
+    }
+    throw new Error('Unrecognized character: "' + c + '"');
+  }
+  return tokens;
+}
+
+function parseLogic(str){
+  if(!str || !str.trim()) throw new Error('Expression is empty.');
+  const tokens = tokenize(str);
+  if(tokens.length === 0) throw new Error('Expression is empty.');
+  let pos = 0;
+  const peek = () => tokens[pos];
+  const consume = () => tokens[pos++];
+
+  function parsePrimary(){
+    const t = peek();
+    if (t === '(') {
+      consume();
+      const node = parseIff();
+      if (peek() !== ')') throw new Error('Missing closing parenthesis.');
+      consume();
+      return node;
+    }
+    if (t === undefined) throw new Error('Unexpected end of expression — check your operators.');
+    if (/^[A-Za-z][A-Za-z0-9]*$/.test(t)) {
+      consume();
+      if (/^t(rue)?$/i.test(t)) return { type:'const', value:true };
+      if (/^f(alse)?$/i.test(t)) return { type:'const', value:false };
+      return { type:'var', name:t.toLowerCase() };
+    }
+    throw new Error('Unexpected token "' + t + '".');
+  }
+  function parseUnary(){
+    if (peek() === '~') { consume(); return { type:'not', val:parseUnary() }; }
+    return parsePrimary();
+  }
+  function parseAnd(){
+    let left = parseUnary();
+    while (peek() === '&') { consume(); left = { type:'and', left, right:parseUnary() }; }
+    return left;
+  }
+  function parseXor(){
+    let left = parseAnd();
+    while (peek() === '^') { consume(); left = { type:'xor', left, right:parseAnd() }; }
+    return left;
+  }
+  function parseOr(){
+    let left = parseXor();
+    while (peek() === '|') { consume(); left = { type:'or', left, right:parseXor() }; }
+    return left;
+  }
+  function parseImplies(){
+    let left = parseOr();
+    if (peek() === '->') { consume(); return { type:'implies', left, right:parseImplies() }; }
+    return left;
+  }
+  function parseIff(){
+    let left = parseImplies();
+    while (peek() === '<->') { consume(); left = { type:'iff', left, right:parseImplies() }; }
+    return left;
+  }
+
+  const ast = parseIff();
+  if (pos !== tokens.length) throw new Error('Unexpected token "' + tokens[pos] + '" — check your syntax.');
+  return ast;
+}
+
+function getVars(ast, set){
+  set = set || new Set();
+  if (!ast) return set;
+  if (ast.type === 'var') set.add(ast.name);
+  if (ast.left) getVars(ast.left, set);
+  if (ast.right) getVars(ast.right, set);
+  if (ast.val) getVars(ast.val, set);
+  return set;
+}
+
+function evalLogic(ast, env){
+  switch(ast.type){
+    case 'const': return ast.value;
+    case 'var': return env[ast.name];
+    case 'not': return !evalLogic(ast.val, env);
+    case 'and': return evalLogic(ast.left, env) && evalLogic(ast.right, env);
+    case 'xor': return evalLogic(ast.left, env) !== evalLogic(ast.right, env);
+    case 'or': return evalLogic(ast.left, env) || evalLogic(ast.right, env);
+    case 'implies': return (!evalLogic(ast.left, env)) || evalLogic(ast.right, env);
+    case 'iff': return evalLogic(ast.left, env) === evalLogic(ast.right, env);
+  }
+}
+
+function fmtBool(b){ return b ? 'T' : 'F'; }
+
+function runLogic(exprAStr, exprBStr){
+  const errBox = document.getElementById('logicError');
+  const resArea = document.getElementById('logicResult');
+  errBox.classList.remove('show'); errBox.textContent = '';
+  resArea.classList.remove('show');
+
+  let astA, astB = null;
+  try {
+    astA = parseLogic(exprAStr);
+    if (exprBStr && exprBStr.trim()) astB = parseLogic(exprBStr);
+  } catch(e){
+    errBox.textContent = 'Parse error: ' + e.message;
+    errBox.classList.add('show');
+    return;
+  }
+
+  const varsSet = getVars(astA);
+  if (astB) getVars(astB, varsSet);
+  const vars = Array.from(varsSet).sort();
+
+  if (vars.length === 0) {
+    errBox.textContent = 'No variables found — enter at least one propositional variable (e.g. p, q).';
+    errBox.classList.add('show');
+    return;
+  }
+  if (vars.length > 6) {
+    errBox.textContent = 'Too many variables (' + vars.length + ') — please use at most 6 for a readable table.';
+    errBox.classList.add('show');
+    return;
+  }
+
+  const n = vars.length;
+  const rows = [];
+  let allMatch = true;
+  for (let i = 0; i < (1 << n); i++) {
+    const env = {};
+    vars.forEach((v,k)=>{ env[v] = !!((i >> (n-1-k)) & 1); });
+    const a = evalLogic(astA, env);
+    const b = astB ? evalLogic(astB, env) : null;
+    if (astB && a !== b) allMatch = false;
+    rows.push({ env, a, b });
+  }
+
+  const verdictDiv = document.getElementById('logicVerdict');
+  if (astB) {
+    verdictDiv.innerHTML = allMatch
+      ? '<div class="verdict yes">✓ Equivalent — A and B match on every row.</div>'
+      : '<div class="verdict no">✕ Not equivalent — A and B differ on the shaded row(s) below.</div>';
+  } else {
+    verdictDiv.innerHTML = '';
+  }
+
+  const table = document.getElementById('logicTable');
+  let thead = '<thead><tr>';
+  vars.forEach(v=> thead += '<th>' + v + '</th>');
+  thead += '<th>A</th>';
+  if (astB) thead += '<th>B</th><th>Match</th>';
+  thead += '</tr></thead>';
+
+  let tbody = '<tbody>';
+  rows.forEach(r=>{
+    const mismatch = astB && r.a !== r.b;
+    tbody += '<tr' + (mismatch ? ' class="mismatch"' : '') + '>';
+    vars.forEach(v=> tbody += '<td>' + fmtBool(r.env[v]) + '</td>');
+    tbody += '<td>' + fmtBool(r.a) + '</td>';
+    if (astB) {
+      tbody += '<td>' + fmtBool(r.b) + '</td>';
+      tbody += '<td>' + (mismatch ? '✕' : '✓') + '</td>';
+    }
+    tbody += '</tr>';
+  });
+  tbody += '</tbody>';
+
+  table.innerHTML = thead + tbody;
+  resArea.classList.add('show');
+}
+
+document.getElementById('btnEvalLogic').addEventListener('click', ()=>{
+  runLogic(document.getElementById('exprA').value, document.getElementById('exprB').value);
+});
+document.getElementById('btnLogicExample1').addEventListener('click', ()=>{
+  document.getElementById('exprA').value = '~(p & q)';
+  document.getElementById('exprB').value = '~p | ~q';
+  runLogic('~(p & q)', '~p | ~q');
+});
+
+/* ============================================================
+   UNIT 2 — PERMUTATIONS & COMBINATIONS
+============================================================ */
+function factorial(n){
+  if (n < 0) return null;
+  let r = 1n;
+  for (let i = 2; i <= n; i++) r *= BigInt(i);
+  return r;
+}
+function nPr(n,r){ if (r<0||n<0||r>n) return null; return factorial(n) / factorial(n-r); }
+function nCr(n,r){ if (r<0||n<0||r>n) return null; return factorial(n) / (factorial(r) * factorial(n-r)); }
+function permRep(n,r){ if (n<0||r<0) return null; return BigInt(n) ** BigInt(r); }
+function combRep(n,r){ if (n<0||r<0) return null; if (n===0 && r>0) return 0n; return nCr(n+r-1, r); }
+function fmtBig(x){
+  if (x === null || x === undefined) return '—';
+  return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+function runPC(nVal, rVal){
+  const errBox = document.getElementById('pcError');
+  const resArea = document.getElementById('pcResult');
+  errBox.classList.remove('show'); errBox.textContent = '';
+  resArea.classList.remove('show');
+
+  const n = Number(nVal), r = Number(rVal);
+  if (!Number.isInteger(n) || !Number.isInteger(r) || n < 0 || r < 0) {
+    errBox.textContent = 'Please enter non-negative whole numbers for both n and r.';
+    errBox.classList.add('show');
+    return;
+  }
+  if (n > 1000 || r > 1000) {
+    errBox.textContent = 'Please keep n and r at or below 1000.';
+    errBox.classList.add('show');
+    return;
+  }
+
+  const rGTn = r > n;
+  const cards = [
+    { label:'n! — factorial of n', formula:n + '!', value: fmtBig(factorial(n)) },
+    { label:'r! — factorial of r', formula:r + '!', value: fmtBig(factorial(r)) },
+    { label:'P(n, r) — permutations', formula:'n! / (n − r)!', value: rGTn ? 'undefined (r > n)' : fmtBig(nPr(n,r)) },
+    { label:'C(n, r) — combinations', formula:'n! / (r!(n − r)!)', value: rGTn ? 'undefined (r > n)' : fmtBig(nCr(n,r)) },
+    { label:'Permutations with repetition', formula:'n^r', value: fmtBig(permRep(n,r)) },
+    { label:'Combinations with repetition', formula:'C(n + r − 1, r)', value: fmtBig(combRep(n,r)) },
+    { label:'Circular permutations (of n)', formula:'(n − 1)!', value: n >= 1 ? fmtBig(factorial(n-1)) : 'undefined (n = 0)' },
+  ];
+
+  const grid = document.getElementById('pcGrid');
+  grid.innerHTML = cards.map(c => `
+    <div class="stat-card">
+      <div class="stat-label">${c.label}</div>
+      <div class="stat-formula">${c.formula}</div>
+      <div class="stat-value">${c.value}</div>
+    </div>
+  `).join('');
+
+  resArea.classList.add('show');
+}
+document.getElementById('btnEvalPC').addEventListener('click', ()=>{
+  runPC(document.getElementById('pcN').value, document.getElementById('pcR').value);
+});
+document.getElementById('btnPCExample').addEventListener('click', ()=>{
+  document.getElementById('pcN').value = 10;
+  document.getElementById('pcR').value = 3;
+  runPC(10,3);
+});
+
+/* --- distinguishable permutations of a word --- */
+function runWord(wordVal){
+  const errBox = document.getElementById('wordError');
+  const resArea = document.getElementById('wordResult');
+  errBox.classList.remove('show'); errBox.textContent=''; resArea.classList.remove('show'); resArea.innerHTML='';
+
+  const cleaned = (wordVal||'').toUpperCase().replace(/[^A-Z]/g,'');
+  if (!cleaned) { errBox.textContent = 'Please enter a word using letters A–Z.'; errBox.classList.add('show'); return; }
+  if (cleaned.length > 15) { errBox.textContent = 'Please keep the word to 15 letters or fewer.'; errBox.classList.add('show'); return; }
+
+  const freq = {};
+  for (const c of cleaned) freq[c] = (freq[c]||0)+1;
+  const n = cleaned.length;
+  let denom = 1n;
+  Object.values(freq).forEach(f => denom *= factorial(f));
+  const result = factorial(n) / denom;
+
+  const breakdown = Object.entries(freq).map(([letter,count]) => `${letter}: ${count}${count>1 ? ' → '+count+'!' : ''}`).join(' &nbsp;·&nbsp; ');
+  const denomStr = Object.values(freq).filter(f=>f>1).map(f=>f+'!').join(' × ') || '1';
+
+  resArea.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">"${cleaned}" — ${n} letters</div>
+      <div class="stat-formula">Letter counts: ${breakdown}</div>
+      <div class="stat-formula">${n}! / (${denomStr})</div>
+      <div class="stat-value">${fmtBig(result)}</div>
+    </div>`;
+  resArea.classList.add('show');
+}
+document.getElementById('btnEvalWord').addEventListener('click', ()=> runWord(document.getElementById('wordInput').value));
+document.getElementById('btnWordExample').addEventListener('click', ()=>{
+  document.getElementById('wordInput').value = 'RADAR';
+  runWord('RADAR');
+});
+
+/* --- two-group selection --- */
+function runGroup(n1v,r1v,n2v,r2v){
+  const errBox = document.getElementById('groupError');
+  const resArea = document.getElementById('groupResult');
+  errBox.classList.remove('show'); errBox.textContent=''; resArea.classList.remove('show'); resArea.innerHTML='';
+
+  const n1=Number(n1v), r1=Number(r1v), n2=Number(n2v), r2=Number(r2v);
+  const vals=[n1,r1,n2,r2];
+  if (vals.some(v=>!Number.isInteger(v) || v<0)) { errBox.textContent='Please enter non-negative whole numbers for all four fields.'; errBox.classList.add('show'); return; }
+  if (r1>n1 || r2>n2) { errBox.textContent='r cannot exceed n within a group.'; errBox.classList.add('show'); return; }
+
+  const c1 = nCr(n1,r1), c2 = nCr(n2,r2);
+  const total = c1*c2;
+
+  resArea.innerHTML = `
+    <div class="grid-results">
+      <div class="stat-card">
+        <div class="stat-label">Group 1: choose r₁ from n₁</div>
+        <div class="stat-formula">C(${n1}, ${r1})</div>
+        <div class="stat-value">${fmtBig(c1)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Group 2: choose r₂ from n₂</div>
+        <div class="stat-formula">C(${n2}, ${r2})</div>
+        <div class="stat-value">${fmtBig(c2)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total ways (product rule)</div>
+        <div class="stat-formula">C(${n1},${r1}) × C(${n2},${r2})</div>
+        <div class="stat-value">${fmtBig(total)}</div>
+      </div>
+    </div>`;
+  resArea.classList.add('show');
+}
+document.getElementById('btnEvalGroup').addEventListener('click', ()=>{
+  runGroup(document.getElementById('g1n').value, document.getElementById('g1r').value, document.getElementById('g2n').value, document.getElementById('g2r').value);
+});
+document.getElementById('btnGroupExample').addEventListener('click', ()=>{
+  document.getElementById('g1n').value=9; document.getElementById('g1r').value=3;
+  document.getElementById('g2n').value=11; document.getElementById('g2r').value=4;
+  runGroup(9,3,11,4);
+});
+
+/* ============================================================
+   UNIT 3 — GRAPH TERMINOLOGY / MATRIX REPRESENTATION
+============================================================ */
+function parseMatrix(text){
+  const rows = text.trim().split('\n').map(r=>r.trim()).filter(r=>r.length>0);
+  if (rows.length === 0) throw new Error('Please enter an adjacency matrix.');
+  const matrix = rows.map(r => r.split(/[\s,]+/).filter(x=>x.length>0).map(Number));
+  const n = matrix.length;
+  matrix.forEach((row,i)=>{
+    if (row.length !== n) throw new Error('Matrix must be square — row ' + (i+1) + ' has ' + row.length + ' value(s), expected ' + n + '.');
+    row.forEach(v=>{ if (Number.isNaN(v)) throw new Error('Row ' + (i+1) + ' contains a non-numeric value.'); });
+  });
+  matrix.forEach(row=>row.forEach(v=>{ if (v < 0) throw new Error('Negative values are not supported in an adjacency matrix.'); }));
+  return matrix;
+}
+
+function analyzeGraph(matrix){
+  const n = matrix.length;
+  const isSymmetric = matrix.every((row,i)=> row.every((v,j)=> v === matrix[j][i]));
+  const hasLoops = matrix.some((row,i)=> row[i] !== 0);
+  const isBinary = matrix.every(row=> row.every(v=> v===0 || v===1));
+  const isDirected = !isSymmetric;
+  const hasParallel = matrix.some((row,i)=> row.some((v,j)=> i!==j && v>1));
+  const isSimple = isSymmetric && !hasLoops && isBinary;
+  const isPseudograph = !isDirected && (hasLoops || hasParallel);
+
+  let edges, degrees=null, inDegrees=null, outDegrees=null;
+  if (!isDirected) {
+    edges = 0;
+    degrees = new Array(n).fill(0);
+    for (let i=0;i<n;i++){
+      degrees[i] += matrix[i][i]*2;
+      edges += matrix[i][i];
+      for (let j=i+1;j<n;j++){
+        degrees[i]+=matrix[i][j];
+        degrees[j]+=matrix[i][j];
+        edges+=matrix[i][j];
+      }
+    }
+  } else {
+    edges = 0;
+    outDegrees = new Array(n).fill(0);
+    inDegrees = new Array(n).fill(0);
+    for (let i=0;i<n;i++) for (let j=0;j<n;j++){
+      outDegrees[i]+=matrix[i][j];
+      inDegrees[j]+=matrix[i][j];
+      edges+=matrix[i][j];
+    }
+  }
+
+  const adj = Array.from({length:n}, ()=> new Set());
+  for (let i=0;i<n;i++) for (let j=0;j<n;j++){
+    if (i!==j && (matrix[i][j]!==0 || matrix[j][i]!==0)) { adj[i].add(j); adj[j].add(i); }
+  }
+  const visited = new Array(n).fill(false);
+  const components = [];
+  for (let s=0;s<n;s++){
+    if (visited[s]) continue;
+    const comp = []; const stack=[s]; visited[s]=true;
+    while (stack.length){
+      const u = stack.pop(); comp.push(u);
+      for (const v of adj[u]) if (!visited[v]) { visited[v]=true; stack.push(v); }
+    }
+    components.push(comp.sort((a,b)=>a-b));
+  }
+
+  let isRegular=false, regularDegree=null;
+  if (!isDirected) { isRegular = degrees.every(d=>d===degrees[0]); regularDegree = isRegular ? degrees[0] : null; }
+
+  let isComplete = false;
+  if (!isDirected && isSimple) isComplete = matrix.every((row,i)=> row.every((v,j)=> i===j || v===1));
+
+  const isolated = [];
+  const pendant = [];
+  for (let i=0;i<n;i++){
+    const deg = isDirected ? (inDegrees[i]+outDegrees[i]) : degrees[i];
+    if (deg === 0) isolated.push(i);
+    if (deg === 1) pendant.push(i);
+  }
+
+  return { n, isSymmetric, isDirected, hasLoops, hasParallel, isBinary, isSimple, isPseudograph, edges, degrees, inDegrees, outDegrees, adj, components, isRegular, regularDegree, isComplete, isolated, pendant };
+}
+
+function vlabel(i){ return 'v' + (i+1); }
+function miniStat(label, value){ return '<div class="mini-stat"><div class="l">' + label + '</div><div class="v">' + value + '</div></div>'; }
+function flag(label, on){ return '<span class="flag' + (on ? ' on' : '') + '">' + (on ? '✓ ' : '· ') + label + '</span>'; }
+
+function renderGraph(matrix){
+  const g = analyzeGraph(matrix);
+  const out = document.getElementById('graphResult');
+  let html = '';
+
+  html += '<div class="summary-grid">';
+  html += miniStat('Order |V|', g.n);
+  html += miniStat('Size |E|', g.edges);
+  html += miniStat('Type', g.isDirected ? 'Directed' : 'Undirected');
+  html += miniStat('Class', g.isSimple ? 'Simple graph' : (g.isPseudograph ? 'Pseudograph' : (g.hasParallel ? 'Multigraph' : 'Graph')));
+  html += miniStat('Connectivity', g.components.length===1 ? 'Connected' : g.components.length + ' components');
+  if (!g.isDirected) html += miniStat('Regular', g.isRegular ? ('Yes (k=' + g.regularDegree + ')') : 'No');
+  html += '</div>';
+
+  html += '<div class="flag-row">';
+  html += flag('Loop(s)', g.hasLoops);
+  html += flag('Parallel edges', g.hasParallel);
+  html += flag('Simple graph', g.isSimple);
+  html += flag('Complete graph', g.isComplete);
+  html += flag('Connected', g.components.length===1);
+  html += flag('Isolated vertex', g.isolated.length>0);
+  html += flag('Pendant vertex', g.pendant.length>0);
+  html += '</div>';
+
+  html += '<div class="subhead">Adjacency matrix</div>';
+  html += '<div class="table-scroll"><table class="matrix-table"><thead><tr><th></th>';
+  for (let j=0;j<g.n;j++) html += '<th>' + vlabel(j) + '</th>';
+  html += '</tr></thead><tbody>';
+  for (let i=0;i<g.n;i++){
+    html += '<tr><th style="text-align:right;padding-right:12px;">' + vlabel(i) + '</th>';
+    for (let j=0;j<g.n;j++){
+      const v = matrix[i][j];
+      let cls = '';
+      if (i===j && v!==0) cls = 'loop-cell';
+      else if (v!==0) cls = 'edge-cell';
+      html += '<td class="' + cls + '">' + v + '</td>';
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+
+  html += '<div class="subhead">' + (g.isDirected ? 'In-degree / out-degree' : 'Degree of each vertex') + '</div>';
+  html += '<div class="table-scroll"><table><thead><tr><th>Vertex</th>';
+  if (g.isDirected) html += '<th>In-deg</th><th>Out-deg</th><th>Total</th>';
+  else html += '<th>Degree</th>';
+  html += '</tr></thead><tbody>';
+  for (let i=0;i<g.n;i++){
+    html += '<tr><td>' + vlabel(i) + '</td>';
+    if (g.isDirected) html += '<td>' + g.inDegrees[i] + '</td><td>' + g.outDegrees[i] + '</td><td>' + (g.inDegrees[i]+g.outDegrees[i]) + '</td>';
+    else html += '<td>' + g.degrees[i] + '</td>';
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+
+  const degSum = g.isDirected ? g.outDegrees.reduce((a,b)=>a+b,0) : g.degrees.reduce((a,b)=>a+b,0);
+  html += '<div class="hint" style="margin-top:8px;">Handshaking theorem: Σ deg(v) = ' + degSum + (g.isDirected ? ' = |E|' : ' = 2|E| = ' + (2*g.edges)) + '</div>';
+
+  html += '<div class="subhead">Adjacency list</div><div class="adj-list">';
+  for (let i=0;i<g.n;i++){
+    const neighbors = [];
+    for (let j=0;j<g.n;j++){
+      if (g.isDirected) { if (matrix[i][j]!==0) neighbors.push(vlabel(j) + (matrix[i][j]>1 ? '×'+matrix[i][j] : '')); }
+      else { if (j!==i && matrix[i][j]!==0) neighbors.push(vlabel(j) + (matrix[i][j]>1 ? '×'+matrix[i][j] : '')); if (j===i && matrix[i][j]!==0) neighbors.push(vlabel(j)+' (loop)'); }
+    }
+    html += '<div class="adj-row"><b>' + vlabel(i) + '</b> → ' + (neighbors.length ? neighbors.join(', ') : 'isolated') + '</div>';
+  }
+  html += '</div>';
+
+  html += '<div class="subhead">Connected components</div><div>';
+  g.components.forEach((comp,idx)=>{ html += '<span class="comp-pill">C' + (idx+1) + ' = { ' + comp.map(vlabel).join(', ') + ' }</span>'; });
+  html += '</div>';
+
+  out.innerHTML = html;
+  out.classList.add('show');
+}
+
+function runGraph(text){
+  const errBox = document.getElementById('graphError');
+  const resArea = document.getElementById('graphResult');
+  errBox.classList.remove('show'); errBox.textContent = '';
+  resArea.classList.remove('show'); resArea.innerHTML = '';
+
+  let matrix;
+  try {
+    matrix = parseMatrix(text);
+    if (matrix.length > 14) throw new Error('Please use at most 14 vertices for a readable display.');
+  } catch(e){
+    errBox.textContent = e.message;
+    errBox.classList.add('show');
+    return;
+  }
+  renderGraph(matrix);
+}
+
+document.getElementById('btnEvalGraph').addEventListener('click', ()=> runGraph(document.getElementById('matrixInput').value));
+document.getElementById('btnGraphExample1').addEventListener('click', ()=>{
+  const ex = '0 1 1 0\n1 0 1 1\n1 1 0 0\n0 1 0 0';
+  document.getElementById('matrixInput').value = ex; runGraph(ex);
+});
+document.getElementById('btnGraphExample2').addEventListener('click', ()=>{
+  const ex = '0 1 0\n0 0 1\n1 0 0';
+  document.getElementById('matrixInput').value = ex; runGraph(ex);
+});
+document.getElementById('btnGraphExample3').addEventListener('click', ()=>{
+  const ex = '0 1 0 0\n1 0 0 0\n0 0 0 1\n0 0 1 0';
+  document.getElementById('matrixInput').value = ex; runGraph(ex);
+});
+</script>
+</body>
+</html>
